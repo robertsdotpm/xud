@@ -27,11 +27,13 @@ interface Peer {
   on(event: 'handshake', listener: () => void): this;
   once(event: 'open', listener: () => void): this;
   once(event: 'close', listener: () => void): this;
+  once(event: 'timeout', listen: () => void): this;
   once(event: 'ban', listener: () => void): this;
   emit(event: 'connect'): boolean;
   emit(event: 'ban'): boolean;
   emit(event: 'open'): boolean;
   emit(event: 'close'): boolean;
+  emit(event: 'timeout'): boolean;
   emit(event: 'error', err: Error): boolean;
   emit(event: 'packet', packet: Packet): boolean;
   emit(event: 'handshake'): boolean;
@@ -358,9 +360,9 @@ class Peer extends EventEmitter {
   private checkTimeout = () => {
     const now = ms();
 
-    for (const [packetType, entry] of this.responseMap) {
+    for (const [_, entry] of this.responseMap) {
       if (now > entry.timeout) {
-        this.emitError(`Peer (${this.nodePubKey}) is stalling (${packetType})`);
+        this.emit('timeout');
         this.close();
         return;
       }

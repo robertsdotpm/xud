@@ -1,6 +1,6 @@
 import Sequelize from 'sequelize';
 import { db } from '../../types';
-import { Address } from '../../types/p2p';
+import { Address, ReputationEvent } from '../../types/p2p';
 
 export default (sequelize: Sequelize.Sequelize, DataTypes: Sequelize.DataTypes) => {
   const attributes: db.SequelizeAttributes<db.NodeAttributes> = {
@@ -20,7 +20,24 @@ export default (sequelize: Sequelize.Sequelize, DataTypes: Sequelize.DataTypes) 
         }
       },
     },
-    banned: { type: DataTypes.BOOLEAN, allowNull: true },
+    reputationEventsText: { type: Sequelize.TEXT, allowNull: false },
+    reputationEvents: {
+      type: Sequelize.VIRTUAL,
+      get(this: db.NodeInstance) {
+        if (this.reputationEventsText) {
+          return JSON.parse(this.reputationEventsText);
+        } else {
+          return [];
+        }
+      },
+      set(this: db.NodeInstance, value: ReputationEvent[]) {
+        if (value) {
+          this.setDataValue('reputationEventsText', JSON.stringify(value));
+        } else {
+          this.setDataValue('reputationEventsText', '[]');
+        }
+      },
+    },
   };
 
   const indexes: Sequelize.DefineIndexesOptions[] = [{

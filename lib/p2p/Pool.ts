@@ -14,6 +14,8 @@ import { HandshakeState, Address, NodeConnectionInfo } from '../types/p2p';
 import addressUtils from '../utils/addressUtils';
 import { getExternalIp } from '../utils/utils';
 import assert from 'assert';
+import { ReputationEventType } from '../types/enums';
+import BanInformPacket from './packets/types/BanInformPacket';
 
 type PoolConfig = {
   listen: boolean;
@@ -72,6 +74,7 @@ class Pool extends EventEmitter {
       });
     }
     this.nodes = new NodeList(new P2PRepository(logger, models));
+    this.bindNodeList();
   }
 
   public get peerCount(): number {
@@ -155,6 +158,15 @@ class Pool extends EventEmitter {
           this.logger.warn(`Could not verify reachability of advertised address: ${externalAddress}`);
         }
       }
+    });
+  }
+
+  /**
+   * To inform nodes when they get banned
+   */
+  private bindNodeList = () => {
+    this.nodes.on('node.ban', (nodePubKey, events) => {
+      this.sendToPeer(nodePubKey, new BanInformPacket({ events }));
     });
   }
 
@@ -377,6 +389,10 @@ class Pool extends EventEmitter {
         this.emit('packet.swapResponse', packet);
         break;
       }
+      case PacketType.BAN_INFORM: {
+        this.logger.info(`got banned by ${peer.nodePubKey} because of: ${JSON.stringify(packet.body)}`);
+        break;
+      }
     }
   }
 
@@ -458,6 +474,11 @@ class Pool extends EventEmitter {
       if (peer.nodePubKey !== this.handshakeData.nodePubKey) {
         this.logger.error(`peer error (${peer.nodePubKey}): ${err.message}`);
       }
+    });
+
+    peer.once('timeout', () => {
+      this.logger.warn(`Peer (${peer.nodePubKey}) is stalling`);
+      this.nodes.addReputationEvent(peer.nodePubKey!, ReputationEventType.PacketTimeout);
     });
 
     peer.once('open', async () => {

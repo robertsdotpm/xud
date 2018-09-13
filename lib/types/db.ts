@@ -1,5 +1,5 @@
 import Sequelize, { DataTypeAbstract, DefineAttributeColumnOptions } from 'sequelize';
-import { Address, NodeConnectionInfo } from './p2p';
+import { NodeConnectionInfo, ReputationEvent } from './p2p';
 import { Currency, Pair } from './orders';
 
 export type SequelizeAttributes<T extends { [key: string]: any }> = {
@@ -28,11 +28,14 @@ export type NodeFactory = NodeConnectionInfo;
 
 export type NodeAttributes = NodeFactory & {
   id: number;
-  banned: boolean;
   addressesText: string;
+  reputationEvents: ReputationEvent[],
+  reputationEventsText: string,
 };
 
-export type NodeInstance = NodeAttributes & Sequelize.Instance<NodeAttributes>;
+export type NodeInstance = NodeAttributes & Sequelize.Instance<NodeAttributes> & {
+  reputationScore: number;
+};
 
 export type PairFactory = Pair;
 

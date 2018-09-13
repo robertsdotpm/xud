@@ -4,6 +4,13 @@ export enum SwapClients {
   RAIDEN,
 }
 
+export enum ReputationEventType {
+  ManualBan = 'manualBan',
+  PacketTimeout = 'packetTimeout',
+  SwapTimeout = 'swapTimeout',
+  SwapSuccess = 'swapSuccess',
+}
+
 export enum OrderingDirection {
   DESC = 'DESC',
   ASC = 'ASC',

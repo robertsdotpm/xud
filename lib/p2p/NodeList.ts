@@ -1,17 +1,38 @@
 import P2PRepository from './P2PRepository';
 import { NodeInstance, NodeFactory } from '../types/db';
-import { Address } from '../types/p2p';
+import { Address, ReputationEvent } from '../types/p2p';
 import addressUtils from '../utils/addressUtils';
+import { ReputationEventType } from '../types/enums';
+import { ms } from '../utils/utils';
+import { EventEmitter } from 'events';
+
+const ReputationEventWeight = {
+  [ReputationEventType.ManualBan]: -100000000,
+  [ReputationEventType.PacketTimeout]: -5,
+  [ReputationEventType.SwapTimeout]: -15,
+  [ReputationEventType.SwapSuccess]: 1,
+};
+
+// TODO: remove events after certain amount of time
+
+interface NodeList {
+  on(event: 'node.ban', listener: (nodePubKey: string, events: ReputationEvent[]) => void): this;
+  emit(event: 'node.ban', nodePubKey: string, events: ReputationEvent[]): boolean;
+}
 
 /** Represents a list of nodes for managing network peers activity */
-class NodeList {
+class NodeList extends EventEmitter {
+  private banThreshold = -50;
+
   private nodes = new Map<string, NodeInstance>();
 
   public get count() {
     return this.nodes.size;
   }
 
-  constructor(private repository: P2PRepository) {}
+  constructor(private repository: P2PRepository) {
+    super();
+  }
 
   /**
    * Check if a node with a given nodePubKey exists.
@@ -29,18 +50,12 @@ class NodeList {
    * @returns true if the node was banned, false otherwise
    */
   public ban = async (nodePubKey: string): Promise<boolean> => {
-    const node = this.nodes.get(nodePubKey);
-    if (node) {
-      node.banned = true;
-      await node.save();
-      return true;
-    }
-    return false;
+    return this.addReputationEvent(nodePubKey, ReputationEventType.ManualBan);
   }
 
   public isBanned = (nodePubKey: string): boolean => {
     const node = this.nodes.get(nodePubKey);
-    return node ? node.banned : false;
+    return node ? this.nodeIsBanned(node) : false;
   }
 
   /**
@@ -50,6 +65,7 @@ class NodeList {
     const nodes = await this.repository.getNodes();
 
     nodes.forEach((node) => {
+      node.reputationScore = this.calculateReputationScore(node.reputationEvents);
       this.nodes.set(node.nodePubKey, node);
     });
   }
@@ -87,6 +103,28 @@ class NodeList {
     return false;
   }
 
+  /**
+   * Add a reputation event to the nodes history
+   * @return true if the node was banned, false otherwise
+   */
+  public addReputationEvent = async (nodePubKey: string, type: ReputationEventType) => {
+    const node = this.nodes.get(nodePubKey);
+    if (node) {
+      node.reputationScore += ReputationEventWeight[type];
+
+      if (this.nodeIsBanned(node)) {
+        this.emit('node.ban', nodePubKey, node.reputationEvents);
+      }
+
+      node.reputationEvents = [...node.reputationEvents, { type, date: ms() }];
+      await node.save();
+
+      return true;
+    }
+
+    return false;
+  }
+
   public removeAddress = async (nodePubKey: string, address: Address) => {
     const node = this.nodes.get(nodePubKey);
     if (node) {
@@ -99,6 +137,20 @@ class NodeList {
     }
 
     return false;
+  }
+
+  private calculateReputationScore = (reputationEvents: ReputationEvent[]): number => {
+    let score = 0;
+
+    reputationEvents.forEach((occurrence) => {
+      score += ReputationEventWeight[occurrence.type];
+    });
+
+    return score;
+  }
+
+  private nodeIsBanned = (node: NodeInstance) => {
+    return node.reputationScore < this.banThreshold;
   }
 }
 

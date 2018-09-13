@@ -12,6 +12,7 @@ enum PacketType {
   DEAL_RESPONSE = 'DEAL_RESPONSE',
   SWAP_REQUEST = 'SWAP_REQUEST',
   SWAP_RESPONSE = 'SWAP_RESPONSE',
+  BAN_INFORM = 'BAN_INFORM',
 }
 
 export default PacketType;
