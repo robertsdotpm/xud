@@ -575,6 +575,9 @@ export class LndInfo extends jspb.Message {
     getVersion(): string;
     setVersion(value: string): void;
 
+    getAlias(): string;
+    setAlias(value: string): void;
+
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): LndInfo.AsObject;
@@ -594,6 +597,7 @@ export namespace LndInfo {
         blockheight: number,
         urisList: Array<string>,
         version: string,
+        alias: string,
     }
 }
 
