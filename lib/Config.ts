@@ -55,7 +55,8 @@ class Config {
     this.logPath = this.getDefaultLogPath();
 
     this.p2p = {
-      listen: true,
+      auto: false,
+      listen: false,
       port: 8885, // X = 88, U = 85 in ASCII
       addresses: [],
     };

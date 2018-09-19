@@ -16,6 +16,7 @@ import { getExternalIp } from '../utils/utils';
 import assert from 'assert';
 
 type PoolConfig = {
+  auto: boolean;
   listen: boolean;
   port: number;
   addresses: string[];
@@ -60,9 +61,14 @@ class Pool extends EventEmitter {
   /** This node's listening external socket addresses to advertise to peers. */
   private addresses: Address[] = [];
 
+  /** P2P Auto mode = does everything necessary to connect to p2p network
+  overwriting existing behavior if necessary. **/
+  private auto: Boolean;
+
   constructor(config: PoolConfig, private logger: Logger, models: Models) {
     super();
 
+    this.auto = config.auto;
     if (config.listen) {
       this.listenPort = config.port;
       this.server = net.createServer();
